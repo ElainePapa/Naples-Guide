@@ -1,0 +1,244 @@
+'use strict';
+// ===== Naples Guest Guide =====
+// Guests: public, read-only (no login). Owner (Elaine): taps 🔑, signs in by email,
+// edits text/codes/videos and uploads photo grids — saved live for guests.
+const SUPABASE_URL = 'https://dcvkcmxckustyujzqkgs.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjdmtjbXhja3VzdHl1anpxa2dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NzExMDcsImV4cCI6MjA5NjM0NzEwN30.Y-ocqiO7JcJQO4H0uz19Ifl8TUQgLhpF2qvCnfkuYcI';
+const GUIDE_ID = 'naples';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nl2br = s => esc(s).replace(/\n/g, '<br>');
+
+let isOwner = false, editMode = false;
+
+const STARTER = {
+  title: 'Our Naples Place', tagline: 'Everything you need for a great stay 🌴',
+  welcome: "Welcome! We're so happy to have you. This guide has the Wi-Fi, door codes, how-tos, and where to find everything. Reach out anytime.",
+  checkout: 'Checkout is at 10am — leave used towels in the tub and lock up. Thank you!',
+  wifi: { ssid: '', password: '' },
+  codes: [], videos: [],
+  collections: [
+    { id: 'pantry', icon: '🧂', title: 'Pantry & Kitchen', intro: "What's stocked — spices, oils, vinegars, condiments.", items: [] },
+    { id: 'bath', icon: '🧴', title: 'Bath & Toiletries', intro: 'Shampoos, conditioners, and toiletries.', items: [] },
+    { id: 'beach', icon: '🏖️', title: 'Beach & Pool', intro: 'How to get there and what we provide.', items: [] },
+    { id: 'find', icon: '🧺', title: 'Where to Find Things', intro: 'Towels, umbrellas, beach gear, storage closet downstairs.', items: [] },
+    { id: 'games', icon: '🎲', title: 'Games & Puzzles', intro: 'For a rainy afternoon.', items: [] },
+  ],
+  contact: { name: '', phone: '', note: '' },
+};
+let guide = JSON.parse(JSON.stringify(STARTER));
+
+// ---------- load / save ----------
+async function loadGuide() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('guide').select('data').eq('id', GUIDE_ID).maybeSingle();
+    if (data && data.data) guide = Object.assign(JSON.parse(JSON.stringify(STARTER)), data.data);
+  } catch { /* keep starter */ }
+}
+async function saveGuide() {
+  if (!sb) return;
+  const { error } = await sb.from('guide').upsert({ id: GUIDE_ID, data: guide, updated_at: new Date().toISOString() });
+  if (error) alert('Couldn’t save — ' + error.message + '\n(Are you signed in as the owner? Has the guide SQL been run?)');
+}
+
+// ---------- QR (via free QR service) ----------
+const qr = (text, size = 220) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(text)}`;
+const wifiPayload = w => `WIFI:T:WPA;S:${(w.ssid || '').replace(/([\\;,:"])/g, '\\$1')};P:${(w.password || '').replace(/([\\;,:"])/g, '\\$1')};;`;
+
+// ---------- render ----------
+function ownerBtn(fn, label) { return isOwner ? `<button class="edit-btn" data-edit="${fn}">✏️ ${label || 'Edit'}</button>` : ''; }
+function render() {
+  $('#hero-title').textContent = guide.title || 'Welcome';
+  $('#hero-tag').textContent = guide.tagline || '';
+  const secs = [];
+
+  secs.push(card('welcome', '👋', 'Welcome', `
+    <p>${nl2br(guide.welcome)}</p>
+    ${guide.checkout ? `<div class="callout">🕙 ${nl2br(guide.checkout)}</div>` : ''}
+    ${ownerBtn('welcome')}`));
+
+  secs.push(card('wifi', '📶', 'Wi-Fi', guide.wifi && guide.wifi.ssid ? `
+    <div class="kv"><span>Network</span><b>${esc(guide.wifi.ssid)}</b></div>
+    <div class="kv"><span>Password</span><b class="mono">${esc(guide.wifi.password)}</b>
+      <button class="mini-btn" data-copy="${esc(guide.wifi.password)}">Copy</button></div>
+    <div class="qr-wrap"><img class="qr" src="${qr(wifiPayload(guide.wifi))}" alt="Wi-Fi QR" loading="lazy">
+      <div class="qr-cap">📷 Scan to join automatically</div></div>
+    ${ownerBtn('wifi')}` : `<p class="muted">Wi-Fi not set yet.</p>${ownerBtn('wifi', 'Add Wi-Fi')}`));
+
+  secs.push(card('codes', '🔑', 'Access & Codes', `
+    ${(guide.codes || []).map(c => `<div class="code-row"><div><b>${esc(c.label)}</b>${c.note ? `<small>${esc(c.note)}</small>` : ''}</div><span class="code-val mono">${esc(c.value)}</span></div>`).join('') || '<p class="muted">No codes added yet.</p>'}
+    ${ownerBtn('codes')}`));
+
+  secs.push(card('videos', '🎥', 'How-To Videos', `
+    ${(guide.videos || []).map(v => videoHtml(v)).join('') || '<p class="muted">No videos yet.</p>'}
+    ${ownerBtn('videos')}`));
+
+  (guide.collections || []).forEach(col => {
+    secs.push(card('c-' + col.id, col.icon || '📦', col.title, `
+      ${col.intro ? `<p class="intro">${nl2br(col.intro)}</p>` : ''}
+      <div class="photo-grid">${(col.items || []).map(it => `
+        <figure class="pg-item">${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">` : '<div class="pg-noimg">🖼️</div>'}
+          <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('') || '<p class="muted">Nothing added yet.</p>'}</div>
+      ${isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(col.title)}</button>` : ''}`));
+  });
+
+  if (isOwner) secs.push(`<div class="add-col-wrap"><button class="add-col" data-edit="addcol">＋ Add a section</button></div>`);
+  $('#guide').innerHTML = secs.join('');
+
+  // jump nav
+  $('#jump').innerHTML = [['welcome', '👋'], ['wifi', '📶'], ['codes', '🔑'], ['videos', '🎥'],
+    ...guide.collections.map(c => ['c-' + c.id, c.icon || '📦'])].map(([id, ic]) =>
+      `<a href="#${id}">${ic}</a>`).join('');
+
+  // footer contact
+  const c = guide.contact || {};
+  $('#foot-contact').innerHTML = (c.name || c.phone || c.note) ? `
+    <div class="foot-contact">☎️ <b>${esc(c.name || 'Host')}</b>${c.phone ? ` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}${c.note ? `<div class="muted">${nl2br(c.note)}</div>` : ''} ${ownerBtn('contact')}</div>`
+    : (isOwner ? `<button class="edit-btn" data-edit="contact">✏️ Add contact</button>` : '');
+
+  $('#owner-btn').textContent = isOwner ? (editMode ? '✅' : '🔓') : '🔑';
+}
+function card(id, icon, title, body) {
+  return `<section class="card" id="${id}"><div class="card-head"><span class="card-ic">${icon}</span><h2>${esc(title)}</h2></div>${body}</section>`;
+}
+function videoHtml(v) {
+  const yt = ytId(v.url);
+  const media = yt ? `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${yt}" allowfullscreen loading="lazy"></iframe></div>`
+    : (v.url ? `<video class="video-embed" controls preload="none" src="${esc(v.url)}"></video>` : '');
+  return `<div class="video-row"><div class="video-t">🎬 ${esc(v.title)}</div>${v.note ? `<div class="muted">${esc(v.note)}</div>` : ''}${media || (v.url ? `<a class="mini-btn" href="${esc(v.url)}" target="_blank" rel="noopener">Watch ↗</a>` : '')}</div>`;
+}
+function ytId(u) { const m = String(u || '').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? m[1] : ''; }
+
+// ---------- images ----------
+function compressImage(file, max = 1200, q = 0.75) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > h && w > max) { h = Math.round(h * max / w); w = max; } else if (h > max) { w = Math.round(w * max / h); h = max; }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      cv.toBlob(b => b ? res(b) : rej(new Error('compress failed')), 'image/jpeg', q);
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+async function uploadPhoto(file) {
+  const blob = await compressImage(file);
+  const path = `naples/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { error } = await sb.storage.from('guide').upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) throw error;
+  return `${SUPABASE_URL}/storage/v1/object/public/guide/${path}`;
+}
+
+// ---------- modal ----------
+function openModal(html) { $('#modal-card').innerHTML = html; $('#modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; const c = $('#m-close'); if (c) c.onclick = closeModal; }
+function closeModal() { $('#modal').style.display = 'none'; document.body.style.overflow = ''; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+const field = (label, id, val, ph, ta) => `<label class="fld">${label}${ta ? `<textarea id="${id}" rows="3" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea>` : `<input id="${id}" value="${esc(val || '')}" placeholder="${esc(ph || '')}">`}</label>`;
+
+// ---------- editors ----------
+async function editWelcome() {
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>Welcome section</h3>
+    ${field('Place name', 'e-title', guide.title, 'Our Naples Place')}
+    ${field('Tagline', 'e-tag', guide.tagline)}
+    ${field('Welcome message', 'e-welcome', guide.welcome, '', true)}
+    ${field('Checkout note', 'e-checkout', guide.checkout, '', true)}
+    <button class="save" id="e-save">Save</button>`);
+  $('#e-save').onclick = async () => { guide.title = $('#e-title').value.trim(); guide.tagline = $('#e-tag').value.trim(); guide.welcome = $('#e-welcome').value.trim(); guide.checkout = $('#e-checkout').value.trim(); await saveGuide(); closeModal(); render(); };
+}
+async function editWifi() {
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>Wi-Fi</h3>
+    ${field('Network name (SSID)', 'w-ssid', guide.wifi.ssid, 'exact, case-sensitive')}
+    ${field('Password', 'w-pass', guide.wifi.password)}
+    <p class="hint">A scannable auto-connect QR is generated for guests.</p>
+    <button class="save" id="w-save">Save</button>`);
+  $('#w-save').onclick = async () => { guide.wifi = { ssid: $('#w-ssid').value.trim(), password: $('#w-pass').value }; await saveGuide(); closeModal(); render(); };
+}
+function listEditor(title, arr, fields, onDone) {
+  const rows = () => arr.map((it, i) => `<div class="le-row" data-i="${i}">${fields.map(f => `<div><b>${esc(f.label)}:</b> ${esc(it[f.key] || '—')}</div>`).join('')}<button class="le-del" data-i="${i}">🗑</button></div>`).join('') || '<p class="muted">None yet.</p>';
+  const form = () => fields.map(f => field(f.label, 'le-' + f.key, '', f.ph, f.ta)).join('');
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>${esc(title)}</h3>
+    <div id="le-list">${rows()}</div>
+    <div class="le-form"><div class="le-form-h">Add new</div>${form()}<button class="add" id="le-add">＋ Add</button></div>
+    <button class="save" id="le-done">Done</button>`);
+  const redraw = () => { $('#le-list').innerHTML = rows(); bind(); };
+  const bind = () => $('#le-list').querySelectorAll('.le-del').forEach(b => b.onclick = () => { arr.splice(+b.dataset.i, 1); redraw(); });
+  bind();
+  $('#le-add').onclick = () => { const it = {}; fields.forEach(f => it[f.key] = $('#le-' + f.key).value.trim()); if (fields.every(f => !it[f.key])) return; arr.push(it); fields.forEach(f => $('#le-' + f.key).value = ''); redraw(); };
+  $('#le-done').onclick = async () => { await onDone(); closeModal(); render(); };
+}
+const editCodes = () => listEditor('Access & Codes', guide.codes, [{ key: 'label', label: 'What', ph: 'Front door' }, { key: 'value', label: 'Code', ph: '1234' }, { key: 'note', label: 'Note', ph: 'optional' }], saveGuide);
+const editVideos = () => listEditor('How-To Videos', guide.videos, [{ key: 'title', label: 'Title', ph: 'Turn on the water' }, { key: 'url', label: 'Link', ph: 'YouTube link or video URL' }, { key: 'note', label: 'Note', ph: 'optional', ta: true }], saveGuide);
+const editContact = () => { openModal(`<button class="m-close" id="m-close">✕</button><h3>Contact</h3>${field('Name', 'ct-name', guide.contact.name)}${field('Phone', 'ct-phone', guide.contact.phone)}${field('Note', 'ct-note', guide.contact.note, 'e.g. text is fastest', true)}<button class="save" id="ct-save">Save</button>`); $('#ct-save').onclick = async () => { guide.contact = { name: $('#ct-name').value.trim(), phone: $('#ct-phone').value.trim(), note: $('#ct-note').value.trim() }; await saveGuide(); closeModal(); render(); }; };
+
+async function editCollection(colId) {
+  const col = guide.collections.find(c => c.id === colId); if (!col) return;
+  const itemsHtml = () => (col.items || []).map((it, i) => `<div class="ci-row" data-i="${i}">${it.photo ? `<img src="${esc(it.photo)}">` : '<div class="ci-noimg">🖼️</div>'}<div class="ci-info"><b>${esc(it.name || '(unnamed)')}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</div><button class="le-del" data-i="${i}">🗑</button></div>`).join('') || '<p class="muted">No items yet.</p>';
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>${esc(col.icon)} ${esc(col.title)}</h3>
+    ${field('Section title', 'col-title', col.title)}
+    ${field('Emoji', 'col-icon', col.icon)}
+    ${field('Intro', 'col-intro', col.intro, '', true)}
+    <div class="ci-list" id="ci-list">${itemsHtml()}</div>
+    <div class="le-form"><div class="le-form-h">Add item</div>
+      ${field('Name', 'ci-name', '', 'e.g. Olive oil, Cinnamon, Beach towels')}
+      ${field('Note', 'ci-note', '', 'optional — brand, where it is')}
+      <label class="photo-btn">📷 Add photo<input type="file" id="ci-photo" accept="image/*" hidden></label>
+      <span class="ci-photo-status" id="ci-photo-status"></span>
+      <button class="add" id="ci-add">＋ Add item</button></div>
+    <button class="save" id="col-done">Done</button>
+    <button class="danger" id="col-del">Delete this section</button>`);
+  let pendingPhoto = '';
+  const redraw = () => { $('#ci-list').innerHTML = itemsHtml(); $('#ci-list').querySelectorAll('.le-del').forEach(b => b.onclick = () => { col.items.splice(+b.dataset.i, 1); redraw(); }); };
+  redraw();
+  $('#ci-photo').onchange = async e => { const f = e.target.files[0]; if (!f) return; $('#ci-photo-status').textContent = 'Uploading…'; try { pendingPhoto = await uploadPhoto(f); $('#ci-photo-status').textContent = '✓ photo ready'; } catch (err) { $('#ci-photo-status').textContent = 'Upload failed'; } };
+  $('#ci-add').onclick = () => { const name = $('#ci-name').value.trim(); if (!name && !pendingPhoto) return; col.items = col.items || []; col.items.push({ name, note: $('#ci-note').value.trim(), photo: pendingPhoto }); pendingPhoto = ''; $('#ci-name').value = ''; $('#ci-note').value = ''; $('#ci-photo-status').textContent = ''; redraw(); };
+  $('#col-done').onclick = async () => { col.title = $('#col-title').value.trim() || col.title; col.icon = $('#col-icon').value.trim() || col.icon; col.intro = $('#col-intro').value.trim(); await saveGuide(); closeModal(); render(); };
+  $('#col-del').onclick = async () => { if (!confirm(`Delete “${col.title}” and its items?`)) return; guide.collections = guide.collections.filter(c => c.id !== colId); await saveGuide(); closeModal(); render(); };
+}
+async function addCollection() {
+  const title = prompt('New section name (e.g. "Beach Rules", "Local Favorites"):'); if (!title) return;
+  const icon = prompt('An emoji for it:', '📌') || '📌';
+  guide.collections.push({ id: 'x' + Date.now().toString(36), icon, title: title.trim(), intro: '', items: [] });
+  await saveGuide(); render();
+}
+
+// ---------- owner auth ----------
+function openLogin() {
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>Owner sign-in</h3>
+    <p class="hint">Guests don't need this. Owner only — to edit the guide.</p>
+    <div id="lg1">${field('Your email', 'lg-email', '', 'espector@harrityllp.com')}<button class="save" id="lg-send">Send me a code</button></div>
+    <div id="lg2" style="display:none">${field('8-digit code from email', 'lg-code', '')}<button class="save" id="lg-verify">Sign in</button></div>
+    <p class="status" id="lg-status"></p>`);
+  $('#lg-send').onclick = async () => { const email = $('#lg-email').value.trim(); if (!email) return; $('#lg-status').textContent = 'Sending…'; const { error } = await sb.auth.signInWithOtp({ email }); if (error) { $('#lg-status').textContent = error.message; return; } $('#lg1').style.display = 'none'; $('#lg2').style.display = ''; $('#lg-status').textContent = 'Check your email for the code.'; };
+  $('#lg-verify').onclick = async () => { const email = $('#lg-email').value.trim(), token = $('#lg-code').value.trim(); $('#lg-status').textContent = 'Verifying…'; const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' }); if (error) { $('#lg-status').textContent = error.message; return; } isOwner = true; editMode = true; closeModal(); render(); };
+}
+$('#owner-btn').onclick = () => {
+  if (!isOwner) { openLogin(); return; }
+  editMode = !editMode; render();  // toggle edit affordances
+};
+
+// ---------- delegated clicks ----------
+document.addEventListener('click', e => {
+  const cp = e.target.closest('[data-copy]'); if (cp) { navigator.clipboard && navigator.clipboard.writeText(cp.dataset.copy); cp.textContent = '✓'; setTimeout(() => cp.textContent = 'Copy', 1200); return; }
+  const ed = e.target.closest('[data-edit]'); if (ed && isOwner) {
+    const v = ed.dataset.edit;
+    if (v === 'welcome') editWelcome(); else if (v === 'wifi') editWifi(); else if (v === 'codes') editCodes();
+    else if (v === 'videos') editVideos(); else if (v === 'contact') editContact(); else if (v === 'addcol') addCollection();
+    else if (v.startsWith('col:')) editCollection(v.slice(4));
+    return;
+  }
+  const z = e.target.closest('[data-zoom]'); if (z) { openModal(`<button class="m-close" id="m-close">✕</button><img class="zoom-img" src="${esc(z.dataset.zoom)}">`); return; }
+});
+$('#share-guide').onclick = () => openModal(`<button class="m-close" id="m-close">✕</button><h3>Share this guide</h3><p class="hint">Print this QR for the house, or send guests the link.</p><div class="qr-wrap"><img class="qr" src="${qr(location.href.split('#')[0], 260)}"></div><div class="kv"><span>Link</span><b class="mono" style="font-size:.8rem;word-break:break-all">${esc(location.href.split('#')[0])}</b><button class="mini-btn" data-copy="${esc(location.href.split('#')[0])}">Copy</button></div>`);
+
+// ---------- init ----------
+(async () => {
+  if (sb) { try { const { data } = await sb.auth.getSession(); if (data && data.session) isOwner = true; } catch {} }
+  await loadGuide();
+  render();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();

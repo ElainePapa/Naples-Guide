@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>🌴 Naples Guest Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=1" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1f9ec4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Naples Guide" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1" />
+  <link rel="icon" href="icon-192.png?v=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-title" id="hero-title">Welcome</div>
+      <div class="hero-tag" id="hero-tag"></div>
+    </div>
+    <button class="owner-btn" id="owner-btn" title="Owner">🔑</button>
+  </header>
+
+  <nav class="jump" id="jump"></nav>
+
+  <main id="guide"></main>
+
+  <footer class="foot">
+    <div id="foot-contact"></div>
+    <div class="foot-mini">Digital guest guide · <button class="link-btn" id="share-guide">Share / QR</button></div>
+  </footer>
+
+  <!-- generic modal -->
+  <div class="modal-backdrop" id="modal" style="display:none;"><div class="modal" id="modal-card"></div></div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>
