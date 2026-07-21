@@ -47,6 +47,16 @@ async function saveGuide() {
 const qr = (text, size = 220) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(text)}`;
 const wifiPayload = w => `WIFI:T:WPA;S:${(w.ssid || '').replace(/([\\;,:"])/g, '\\$1')};P:${(w.password || '').replace(/([\\;,:"])/g, '\\$1')};;`;
 
+// ---------- built-in section photos (live in code, so owner edits can't wipe them;
+// keyed by section title — the app falls back to these when the DB has none) ----------
+const SECTION_EXTRAS = {
+  'Pantry & Kitchen': { photos: ['photos/pantry-oils.jpg', 'photos/pantry-shelf.jpg', 'photos/kitchen-appliances.jpg'] },
+  'Spices & Seasonings': { photos: ['photos/spices-1.jpg', 'photos/spices-2.jpg'] },
+  'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
+  'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
+  'Beach & Pool': { photos: ['photos/towels.jpg', 'photos/towels-bags.jpg'], location: { text: 'In the blue console by the entry — beach towels and the 3 beach bags.', photo: 'photos/furniture-blue.jpg' }, items: [{ name: 'Beach towels' }, { name: 'Beach bags (3)' }] },
+};
+
 // ---------- render ----------
 function ownerBtn(fn, label) { return isOwner ? `<button class="edit-btn" data-edit="${fn}">✏️ ${label || 'Edit'}</button>` : ''; }
 function render() {
@@ -86,9 +96,13 @@ function render() {
     ${ownerBtn('videos')}`));
 
   (guide.collections || []).forEach(col => {
-    const loc = col.location && (col.location.text || col.location.photo) ? col.location : null;
-    const photoStrip = (col.photos && col.photos.length)
-      ? `<div class="sec-photos">${col.photos.map(p => `<img src="${esc(p)}" loading="lazy" data-zoom="${esc(p)}">`).join('')}</div>` : '';
+    const extra = SECTION_EXTRAS[col.title] || {};
+    const photos = (col.photos && col.photos.length) ? col.photos : (extra.photos || []);
+    const items = (col.items && col.items.length) ? col.items : (extra.items || []);
+    const rawLoc = (col.location && (col.location.text || col.location.photo)) ? col.location : extra.location;
+    const loc = rawLoc && (rawLoc.text || rawLoc.photo) ? rawLoc : null;
+    const photoStrip = photos.length
+      ? `<div class="sec-photos">${photos.map(p => `<img src="${esc(p)}" loading="lazy" data-zoom="${esc(p)}">`).join('')}</div>` : '';
     const locHtml = loc ? `<div class="loc-callout"${loc.photo ? ` data-zoom="${esc(loc.photo)}"` : ''}>
         ${loc.photo ? `<img src="${esc(loc.photo)}" loading="lazy" alt="where to find these">` : '<span class="loc-pin">📍</span>'}
         <div class="loc-txt"><b>Where to find these</b><span>${esc(loc.text || '')}</span></div></div>` : '';
@@ -97,7 +111,7 @@ function render() {
       ${col.intro ? `<p class="intro">${nl2br(col.intro)}</p>` : ''}
       ${locHtml}
       ${photoStrip}
-      <div class="photo-grid">${(col.items || []).map(it => `
+      <div class="photo-grid">${items.map(it => `
         <figure class="pg-item"${titleAttr}>${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">` : '<div class="pg-noimg">🖼️</div>'}
           <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('') || '<p class="muted">Nothing added yet.</p>'}</div>
       ${isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(col.title)}</button>` : ''}`));
