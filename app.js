@@ -50,7 +50,7 @@ const wifiPayload = w => `WIFI:T:WPA;S:${(w.ssid || '').replace(/([\\;,:"])/g, '
 // ---------- built-in section photos (live in code, so owner edits can't wipe them;
 // keyed by section title — the app falls back to these when the DB has none) ----------
 const SECTION_EXTRAS = {
-  'Pantry & Kitchen': { photos: ['photos/pantry-oils.jpg', 'photos/pantry-shelf.jpg', 'photos/kitchen-appliances.jpg'] },
+  'Pantry & Kitchen': { photos: ['photos/pantry-oils.jpg', 'photos/pantry-shelf.jpg', 'photos/kitchen-appliances.jpg'], items: [{ name: 'Sesame oil', note: 'Sprouts virgin, organic unrefined' }, { name: 'Coconut aminos', note: 'Big Tree Farms, organic — soy-free' }, { name: 'Electric kettle', note: 'For hot water — in the upper kitchen cabinet' }, { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' }] },
   'Spices & Seasonings': { photos: ['photos/spices-1.jpg', 'photos/spices-2.jpg'] },
   'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
@@ -99,7 +99,8 @@ function render() {
   (guide.collections || []).forEach(col => {
     const extra = SECTION_EXTRAS[col.title] || {};
     const photos = (col.photos && col.photos.length) ? col.photos : (extra.photos || []);
-    const items = (col.items && col.items.length) ? col.items : (extra.items || []);
+    const extraItems = (extra.items || []).filter(ei => !(col.items || []).some(ci => (ci.name || '').toLowerCase() === (ei.name || '').toLowerCase()));
+    const items = [...(col.items || []), ...extraItems];
     const rawLoc = (col.location && (col.location.text || col.location.photo)) ? col.location : extra.location;
     const loc = rawLoc && (rawLoc.text || rawLoc.photo) ? rawLoc : null;
     const photoStrip = photos.length
