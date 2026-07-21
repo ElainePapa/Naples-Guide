@@ -1,5 +1,5 @@
 // Naples Guest Guide — network-first so guests always get the latest content.
-const CACHE = 'naples-guide-v14';
+const CACHE = 'naples-guide-v15';
 const SHELL = ['./index.html', './app.js', './style.css', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {}))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
