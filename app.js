@@ -55,7 +55,7 @@ const SECTION_EXTRAS = {
   'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Beach & Pool': { photos: ['photos/towels.jpg', 'photos/towels-bags.jpg'], location: { text: 'In the blue console by the entry — beach towels and the 3 beach bags.', photo: 'photos/furniture-blue.jpg' }, items: [{ name: 'Beach towels' }, { name: 'Beach bags (3)' }] },
-  'Where to Find Things': { location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
+  'Where to Find Things': { photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
 };
 
 // ---------- render ----------
