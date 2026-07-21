@@ -45,7 +45,10 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 0}
 .video-row{padding:10px 0;border-bottom:1px solid var(--line)}
 .video-row:last-child{border-bottom:none}
 .video-t{font-weight:700;font-size:.95rem}
-.video-embed{width:100%;aspect-ratio:16/9;border:none;border-radius:12px;margin-top:8px;background:#000}
+.video-embed{position:relative;width:100%;aspect-ratio:16/9;border:none;border-radius:12px;margin-top:8px;background:#000}
+.video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:none;border-radius:12px}
+/* uploaded video files keep their natural shape (portrait phone clips included) */
+.video-file{display:block;margin:8px auto 0;max-width:100%;max-height:70vh;border-radius:12px;background:#000}
 
 .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .pg-item{background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow:hidden}

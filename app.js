@@ -163,7 +163,7 @@ function card(id, icon, title, body) {
 function videoHtml(v) {
   const yt = ytId(v.url);
   const media = yt ? `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${yt}" allowfullscreen loading="lazy"></iframe></div>`
-    : (v.url ? `<video class="video-embed" controls preload="none" src="${esc(v.url)}"></video>` : '');
+    : (v.url ? `<video class="video-file" controls playsinline preload="metadata" src="${esc(v.url)}"></video>` : '');
   return `<div class="video-row"><div class="video-t">🎬 ${esc(v.title)}</div>${v.note ? `<div class="muted">${esc(v.note)}</div>` : ''}${media || (v.url ? `<a class="mini-btn" href="${esc(v.url)}" target="_blank" rel="noopener">Watch ↗</a>` : '')}</div>`;
 }
 function ytId(u) { const m = String(u || '').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? m[1] : ''; }
