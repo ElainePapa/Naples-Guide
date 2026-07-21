@@ -111,9 +111,14 @@ function render() {
       ${col.intro ? `<p class="intro">${nl2br(col.intro)}</p>` : ''}
       ${locHtml}
       ${photoStrip}
-      <div class="photo-grid">${items.map(it => `
-        <figure class="pg-item"${titleAttr}>${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">` : '<div class="pg-noimg">🖼️</div>'}
-          <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('') || '<p class="muted">Nothing added yet.</p>'}</div>
+      ${(() => {
+        const withPics = items.filter(it => it.photo), noPics = items.filter(it => !it.photo);
+        const grid = withPics.length ? `<div class="photo-grid">${withPics.map(it => `
+          <figure class="pg-item"${titleAttr}><img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">
+          <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>` : '';
+        const list = noPics.length ? `<ul class="item-list"${titleAttr}>${noPics.map(it => `<li><b>${esc(it.name)}</b>${it.note ? `<span>${esc(it.note)}</span>` : ''}</li>`).join('')}</ul>` : '';
+        return grid + list || '<p class="muted">Nothing added yet.</p>';
+      })()}
       ${isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(col.title)}</button>` : ''}`));
   });
 
@@ -240,7 +245,7 @@ const editContact = () => { openModal(`<button class="m-close" id="m-close">✕<
 
 async function editCollection(colId) {
   const col = guide.collections.find(c => c.id === colId); if (!col) return;
-  const itemsHtml = () => (col.items || []).map((it, i) => `<div class="ci-row" data-i="${i}">${it.photo ? `<img src="${esc(it.photo)}">` : '<div class="ci-noimg">🖼️</div>'}<div class="ci-info"><b>${esc(it.name || '(unnamed)')}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</div><button class="le-del" data-i="${i}">🗑</button></div>`).join('') || '<p class="muted">No items yet.</p>';
+  const itemsHtml = () => (col.items || []).map((it, i) => `<div class="ci-row" data-i="${i}">${it.photo ? `<img src="${esc(it.photo)}">` : ''}<div class="ci-info"><b>${esc(it.name || '(unnamed)')}</b>${it.note ? `<small>${esc(it.note)}</small>` : ''}</div><button class="le-del" data-i="${i}">🗑</button></div>`).join('') || '<p class="muted">No items yet.</p>';
   openModal(`<button class="m-close" id="m-close">✕</button><h3>${esc(col.icon)} ${esc(col.title)}</h3>
     ${field('Section title', 'col-title', col.title)}
     ${field('Emoji', 'col-icon', col.icon)}
