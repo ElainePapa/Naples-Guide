@@ -64,7 +64,16 @@ const VIRTUAL_SECTIONS = [
     { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet' },
     { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' },
     { name: 'Cookware & lids', note: 'Pots, pans and glass lids in the lower cabinets' },
+    { name: 'Hand mixer', note: 'Cuisinart 9-speed' },
+    { name: 'Food chopper & grinder', note: 'Cuisinart — chop & grind' },
+    { name: 'Blender', note: 'Oster glass-jar blender' },
+    { name: 'Toaster', note: 'Zwilling 2-slice' },
+    { name: 'Coffee percolator', note: 'Presto stainless' },
   ] },
+];
+// code-defined videos (always shown, survive owner edits)
+const BUILTIN_VIDEOS = [
+  { title: 'How to find the hidden pantry', url: 'videos/hidden-pantry.mp4', note: 'A quick walkthrough' },
 ];
 
 // ---------- render ----------
@@ -113,8 +122,9 @@ function render() {
   }
   secs.push(card('codes', '🔑', 'Access & Codes', codesBody));
 
+  const allVideos = [...(guide.videos || []), ...BUILTIN_VIDEOS];
   secs.push(card('videos', '🎥', 'How-To Videos', `
-    ${(guide.videos || []).map(v => videoHtml(v)).join('') || '<p class="muted">No videos yet.</p>'}
+    ${allVideos.map(v => videoHtml(v)).join('') || '<p class="muted">No videos yet.</p>'}
     ${ownerBtn('videos')}`));
 
   (guide.collections || []).forEach(col => {
