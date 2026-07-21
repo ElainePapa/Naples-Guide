@@ -88,3 +88,14 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 0}
 .ci-noimg{width:44px;height:44px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center}
 .ci-info{flex:1;font-size:.9rem}
 .ci-info small{display:block;color:var(--soft)}
+
+/* section photo strip + "where to find it" callout */
+.sec-photos{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:4px 0 12px;scrollbar-width:none}
+.sec-photos::-webkit-scrollbar{display:none}
+.sec-photos img{height:150px;border-radius:12px;border:1px solid var(--line);object-fit:cover;flex:0 0 auto;cursor:zoom-in}
+.loc-callout{display:flex;align-items:center;gap:12px;background:#eaf6fb;border:1px solid #bfe3f0;border-radius:12px;padding:10px;margin:4px 0 12px;cursor:zoom-in}
+.loc-callout img{width:74px;height:74px;object-fit:cover;border-radius:10px;flex:0 0 auto;border:1px solid #bfe3f0}
+.loc-pin{font-size:1.6rem}
+.loc-txt{display:flex;flex-direction:column}
+.loc-txt b{font-size:.9rem;color:var(--sea-d)}
+.loc-txt span{font-size:.88rem;color:var(--ink)}

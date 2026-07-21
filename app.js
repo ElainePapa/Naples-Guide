@@ -76,10 +76,19 @@ function render() {
     ${ownerBtn('videos')}`));
 
   (guide.collections || []).forEach(col => {
+    const loc = col.location && (col.location.text || col.location.photo) ? col.location : null;
+    const photoStrip = (col.photos && col.photos.length)
+      ? `<div class="sec-photos">${col.photos.map(p => `<img src="${esc(p)}" loading="lazy" data-zoom="${esc(p)}">`).join('')}</div>` : '';
+    const locHtml = loc ? `<div class="loc-callout"${loc.photo ? ` data-zoom="${esc(loc.photo)}"` : ''}>
+        ${loc.photo ? `<img src="${esc(loc.photo)}" loading="lazy" alt="where to find these">` : '<span class="loc-pin">📍</span>'}
+        <div class="loc-txt"><b>Where to find these</b><span>${esc(loc.text || '')}</span></div></div>` : '';
+    const titleAttr = loc && loc.text ? ` title="📍 ${esc(loc.text)}"` : '';
     secs.push(card('c-' + col.id, col.icon || '📦', col.title, `
       ${col.intro ? `<p class="intro">${nl2br(col.intro)}</p>` : ''}
+      ${locHtml}
+      ${photoStrip}
       <div class="photo-grid">${(col.items || []).map(it => `
-        <figure class="pg-item">${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">` : '<div class="pg-noimg">🖼️</div>'}
+        <figure class="pg-item"${titleAttr}>${it.photo ? `<img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">` : '<div class="pg-noimg">🖼️</div>'}
           <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('') || '<p class="muted">Nothing added yet.</p>'}</div>
       ${isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(col.title)}</button>` : ''}`));
   });
