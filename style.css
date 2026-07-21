@@ -100,12 +100,11 @@ main{max-width:640px;margin:0 auto;padding:14px 14px 0}
 .loc-txt b{font-size:.9rem;color:var(--sea-d)}
 .loc-txt span{font-size:.88rem;color:var(--ink)}
 
-/* guest password gate */
-.gate{position:fixed;inset:0;z-index:500;background:linear-gradient(160deg,var(--sea),var(--sea-d));display:flex;align-items:center;justify-content:center;padding:24px}
-.gate-card{background:#fff;border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center;box-shadow:var(--shadow-lg)}
-.gate-emoji{font-size:2.4rem}
-.gate-card h2{font-family:'Fraunces',Georgia,serif;font-size:1.5rem;margin:6px 0}
-.gate-card p{font-size:.9rem;color:var(--soft);line-height:1.45}
-.gate-card input{width:100%;margin:16px 0 12px;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:16px;text-align:center}
-.gate-card button{width:100%;border:none;background:var(--sea);color:#fff;border-radius:12px;padding:13px;font-weight:700;font-size:1rem;cursor:pointer}
-.gate-status{color:var(--coral);min-height:1em;margin-top:8px;font-size:.85rem}
+/* encrypted access-codes lock */
+.codes-lock{background:#f0fafd;border:1px dashed var(--sea);border-radius:12px;padding:14px}
+.codes-lock .muted{margin-bottom:10px}
+.codes-lock-row{display:flex;gap:8px}
+.codes-lock-row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
+.codes-lock-row .mini-btn{padding:0 16px;font-weight:700}
+.codes-status{color:var(--coral);min-height:1em;margin-top:8px;font-size:.85rem}
+.codes-note{font-size:.82rem;color:var(--sea-d);margin-bottom:6px}

@@ -67,9 +67,19 @@ function render() {
       <div class="qr-cap">📷 Scan to join automatically</div></div>
     ${ownerBtn('wifi')}` : `<p class="muted">Wi-Fi not set yet.</p>${ownerBtn('wifi', 'Add Wi-Fi')}`));
 
-  secs.push(card('codes', '🔑', 'Access & Codes', `
-    ${(guide.codes || []).map(c => `<div class="code-row"><div><b>${esc(c.label)}</b>${c.note ? `<small>${esc(c.note)}</small>` : ''}</div><span class="code-val mono">${esc(c.value)}</span></div>`).join('') || '<p class="muted">No codes added yet.</p>'}
-    ${ownerBtn('codes')}`));
+  const codeRows = arr => (arr || []).map(c => `<div class="code-row"><div><b>${esc(c.label)}</b>${c.note ? `<small>${esc(c.note)}</small>` : ''}</div><span class="code-val mono">${esc(c.value)}</span></div>`).join('') || '<p class="muted">No codes added yet.</p>';
+  let codesBody;
+  if (!codesLocked()) {
+    codesBody = codeRows(guide.codes) + ownerBtn('codes');
+  } else if (unlockedCodes) {
+    codesBody = `<p class="codes-note">🔓 Unlocked on this device.</p>${codeRows(unlockedCodes)}${ownerBtn('codes')}`;
+  } else {
+    codesBody = `<div class="codes-lock"><p class="muted">🔒 Access codes are protected. Enter the password your host gave you.</p>
+      <div class="codes-lock-row"><input id="codes-pass" type="password" placeholder="Password" autocomplete="off">
+      <button class="mini-btn" id="codes-unlock">Unlock</button></div>
+      <p class="codes-status" id="codes-status"></p></div>`;
+  }
+  secs.push(card('codes', '🔑', 'Access & Codes', codesBody));
 
   secs.push(card('videos', '🎥', 'How-To Videos', `
     ${(guide.videos || []).map(v => videoHtml(v)).join('') || '<p class="muted">No videos yet.</p>'}
@@ -147,6 +157,7 @@ async function uploadPhoto(file) {
 function openModal(html) { $('#modal-card').innerHTML = html; $('#modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; const c = $('#m-close'); if (c) c.onclick = closeModal; }
 function closeModal() { $('#modal').style.display = 'none'; document.body.style.overflow = ''; }
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'codes-pass') unlockCodesFromInput(); });
 const field = (label, id, val, ph, ta) => `<label class="fld">${label}${ta ? `<textarea id="${id}" rows="3" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea>` : `<input id="${id}" value="${esc(val || '')}" placeholder="${esc(ph || '')}">`}</label>`;
 
 // ---------- editors ----------
@@ -156,18 +167,30 @@ async function editWelcome() {
     ${field('Tagline', 'e-tag', guide.tagline)}
     ${field('Welcome message', 'e-welcome', guide.welcome, '', true)}
     ${field('Checkout note', 'e-checkout', guide.checkout, '', true)}
-    ${field('Guest password', 'e-pass', '', guide.guestPassHash ? '•••••• set — type to change' : 'optional — leave blank for an open link')}
-    <p class="hint">Set a password and guests must enter it to open the guide. ${guide.guestPassHash ? '<button class="link-btn" id="e-passclear">Remove password</button>' : ''}</p>
+    ${field('Access-code password', 'e-pass', '', codesLocked() ? '•••••• set — type to change' : 'optional — locks your door/pool codes')}
+    <p class="hint">Set a password and your <b>access codes are encrypted</b> — guests must enter it to reveal them. Everything else stays open. ${codesLocked() ? '<button class="link-btn" id="e-passclear">Remove password</button>' : ''}</p>
     <button class="save" id="e-save">Save</button>`);
   $('#e-save').onclick = async () => {
     guide.title = $('#e-title').value.trim(); guide.tagline = $('#e-tag').value.trim();
     guide.welcome = $('#e-welcome').value.trim(); guide.checkout = $('#e-checkout').value.trim();
     const pw = $('#e-pass').value.trim();
-    if (pw) { guide.guestPassHash = await sha(pw); localStorage.setItem('naples_unlock', guide.guestPassHash); }
+    if (pw) {
+      const cur = unlockedCodes || guide.codes || [];
+      guide.passHash = await sha(pw);
+      guide.codesEnc = await encCodes(cur, pw);
+      delete guide.codes;
+      guestPass = pw; unlockedCodes = cur; localStorage.setItem('naples_gp', pw);
+    }
     await saveGuide(); closeModal(); render();
   };
   const pc = document.getElementById('e-passclear');
-  if (pc) pc.onclick = async () => { delete guide.guestPassHash; await saveGuide(); closeModal(); render(); };
+  if (pc) pc.onclick = async () => {
+    const cur = unlockedCodes || (!guide.codesEnc ? (guide.codes || []) : null);
+    if (cur === null) { alert('Unlock the codes first: enter the password in the Access & Codes section, then remove it here.'); return; }
+    guide.codes = cur; delete guide.passHash; delete guide.codesEnc;
+    guestPass = ''; unlockedCodes = null; localStorage.removeItem('naples_gp');
+    await saveGuide(); closeModal(); render();
+  };
 }
 async function editWifi() {
   openModal(`<button class="m-close" id="m-close">✕</button><h3>Wi-Fi</h3>
@@ -190,7 +213,14 @@ function listEditor(title, arr, fields, onDone) {
   $('#le-add').onclick = () => { const it = {}; fields.forEach(f => it[f.key] = $('#le-' + f.key).value.trim()); if (fields.every(f => !it[f.key])) return; arr.push(it); fields.forEach(f => $('#le-' + f.key).value = ''); redraw(); };
   $('#le-done').onclick = async () => { await onDone(); closeModal(); render(); };
 }
-const editCodes = () => listEditor('Access & Codes', guide.codes, [{ key: 'label', label: 'What', ph: 'Front door' }, { key: 'value', label: 'Code', ph: '1234' }, { key: 'note', label: 'Note', ph: 'optional' }], saveGuide);
+const editCodes = () => {
+  if (codesLocked() && !unlockedCodes) { alert('Enter the access-code password in the Access & Codes section to unlock, then edit.'); return; }
+  const arr = codesLocked() ? unlockedCodes : (guide.codes = guide.codes || []);
+  listEditor('Access & Codes', arr, [{ key: 'label', label: 'What', ph: 'Front door' }, { key: 'value', label: 'Code', ph: '1234' }, { key: 'note', label: 'Note', ph: 'optional' }], async () => {
+    if (codesLocked()) { guide.codesEnc = await encCodes(arr, guestPass); delete guide.codes; unlockedCodes = arr; }
+    await saveGuide();
+  });
+};
 const editVideos = () => listEditor('How-To Videos', guide.videos, [{ key: 'title', label: 'Title', ph: 'Turn on the water' }, { key: 'url', label: 'Link', ph: 'YouTube link or video URL' }, { key: 'note', label: 'Note', ph: 'optional', ta: true }], saveGuide);
 const editContact = () => { openModal(`<button class="m-close" id="m-close">✕</button><h3>Contact</h3>${field('Name', 'ct-name', guide.contact.name)}${field('Phone', 'ct-phone', guide.contact.phone)}${field('Note', 'ct-note', guide.contact.note, 'e.g. text is fastest', true)}<button class="save" id="ct-save">Save</button>`); $('#ct-save').onclick = async () => { guide.contact = { name: $('#ct-name').value.trim(), phone: $('#ct-phone').value.trim(), note: $('#ct-note').value.trim() }; await saveGuide(); closeModal(); render(); }; };
 
@@ -242,6 +272,7 @@ $('#owner-btn').onclick = () => {
 
 // ---------- delegated clicks ----------
 document.addEventListener('click', e => {
+  if (e.target.id === 'codes-unlock') { unlockCodesFromInput(); return; }
   const cp = e.target.closest('[data-copy]'); if (cp) { navigator.clipboard && navigator.clipboard.writeText(cp.dataset.copy); cp.textContent = '✓'; setTimeout(() => cp.textContent = 'Copy', 1200); return; }
   const ed = e.target.closest('[data-edit]'); if (ed && isOwner) {
     const v = ed.dataset.edit;
@@ -254,35 +285,52 @@ document.addEventListener('click', e => {
 });
 $('#share-guide').onclick = () => openModal(`<button class="m-close" id="m-close">✕</button><h3>Share this guide</h3><p class="hint">Print this QR for the house, or send guests the link.</p><div class="qr-wrap"><img class="qr" src="${qr(location.href.split('#')[0], 260)}"></div><div class="kv"><span>Link</span><b class="mono" style="font-size:.8rem;word-break:break-all">${esc(location.href.split('#')[0])}</b><button class="mini-btn" data-copy="${esc(location.href.split('#')[0])}">Copy</button></div>`);
 
-// ---------- guest password gate (optional; set by owner) ----------
+// ---------- access-code encryption (codes are stored encrypted; the guest ----------
+// password is the key. Nobody can read the codes from the database or the repo
+// without it — it's real AES-GCM encryption, derived from the password.
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pass, salt) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function encCodes(codes, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(pass, salt);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(codes)));
+  return { s: b64(salt), iv: b64(iv), ct: b64(ct) };
+}
+async function decCodes(enc, pass) {
+  const key = await deriveKey(pass, unb64(enc.s));
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(enc.iv) }, key, unb64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
 async function sha(s) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
-function renderGate() {
-  let ov = document.getElementById('gate');
-  if (!ov) { ov = document.createElement('div'); ov.id = 'gate'; ov.className = 'gate'; document.body.appendChild(ov); }
-  ov.innerHTML = `<div class="gate-card"><div class="gate-emoji">🌴</div>
-    <h2>${esc(guide.title || 'Welcome')}</h2>
-    <p>Enter the guest password your host gave you to open the guide.</p>
-    <input id="gate-pass" type="password" placeholder="Guest password" autocomplete="off">
-    <button id="gate-go">Open guide →</button>
-    <p class="gate-status" id="gate-status"></p></div>`;
-  document.body.style.overflow = 'hidden';
-  const go = async () => {
-    const h = await sha(document.getElementById('gate-pass').value);
-    if (h === guide.guestPassHash) { localStorage.setItem('naples_unlock', h); ov.remove(); document.body.style.overflow = ''; render(); }
-    else document.getElementById('gate-status').textContent = 'Wrong password — check with your host.';
-  };
-  document.getElementById('gate-go').onclick = go;
-  document.getElementById('gate-pass').onkeydown = e => { if (e.key === 'Enter') go(); };
+let guestPass = '';         // the code password, once entered (kept for this device)
+let unlockedCodes = null;   // decrypted codes array, once unlocked
+const codesLocked = () => !!(guide.passHash || guide.codesEnc);   // a password is set
+async function tryUnlock(pass) {
+  if (guide.passHash) { if (await sha(pass) !== guide.passHash) return false; }
+  else if (!guide.codesEnc) return false;
+  if (guide.codesEnc) { try { unlockedCodes = await decCodes(guide.codesEnc, pass); } catch { return false; } }
+  else unlockedCodes = [];
+  guestPass = pass; localStorage.setItem('naples_gp', pass); return true;
+}
+async function unlockCodesFromInput() {
+  const el = document.getElementById('codes-pass'); if (!el) return;
+  if (await tryUnlock(el.value.trim())) render();
+  else { const s = document.getElementById('codes-status'); if (s) s.textContent = 'Wrong password — check with your host.'; }
 }
 
 // ---------- init ----------
 (async () => {
   if (sb) { try { const { data } = await sb.auth.getSession(); if (data && data.session) isOwner = true; } catch {} }
   await loadGuide();
-  const locked = guide.guestPassHash && !isOwner && localStorage.getItem('naples_unlock') !== guide.guestPassHash;
-  if (locked) renderGate(); else render();
+  const saved = localStorage.getItem('naples_gp') || '';
+  if (codesLocked() && saved) await tryUnlock(saved);
+  render();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
