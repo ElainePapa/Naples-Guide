@@ -50,7 +50,7 @@ const wifiPayload = w => `WIFI:T:WPA;S:${(w.ssid || '').replace(/([\\;,:"])/g, '
 // ---------- built-in section photos (live in code, so owner edits can't wipe them;
 // keyed by section title — the app falls back to these when the DB has none) ----------
 const SECTION_EXTRAS = {
-  'Pantry & Kitchen': { photos: ['photos/pantry-oils.jpg', 'photos/pantry-oils2.jpg', 'photos/pantry-shelf.jpg', 'photos/kitchen-appliances.jpg', 'photos/kettle-crockpot.jpg'], items: [{ name: 'Sesame oil', note: 'Sprouts virgin, organic unrefined' }, { name: 'Coconut aminos', note: 'Big Tree Farms, organic — soy-free' }, { name: 'Electric kettle', note: 'For hot water — in the upper kitchen cabinet' }, { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' }] },
+  'Pantry & Kitchen': { rename: 'Pantry', photos: ['photos/pantry-oils.jpg', 'photos/pantry-oils2.jpg', 'photos/pantry-shelf.jpg'], items: [{ name: 'Sesame oil', note: 'Sprouts virgin, organic unrefined' }, { name: 'Coconut aminos', note: 'Big Tree Farms, organic — soy-free' }] },
   'Spices & Seasonings': { photos: ['photos/spices-1.jpg', 'photos/spices-2.jpg'] },
   'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
@@ -58,8 +58,29 @@ const SECTION_EXTRAS = {
   'Where to Find Things': { photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
 };
 
+// code-only sections (rendered after their `after` DB section; not owner-editable)
+const VIRTUAL_SECTIONS = [
+  { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', photos: ['photos/kitchen-appliances.jpg', 'photos/kettle-crockpot.jpg'], items: [
+    { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet' },
+    { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' },
+    { name: 'Cookware & lids', note: 'Pots, pans and glass lids in the lower cabinets' },
+  ] },
+];
+
 // ---------- render ----------
 function ownerBtn(fn, label) { return isOwner ? `<button class="edit-btn" data-edit="${fn}">✏️ ${label || 'Edit'}</button>` : ''; }
+function sectionBody(photos, items, rawLoc, intro) {
+  const loc = rawLoc && (rawLoc.text || rawLoc.photo) ? rawLoc : null;
+  const titleAttr = loc && loc.text ? ` title="📍 ${esc(loc.text)}"` : '';
+  const photoStrip = photos.length ? `<div class="sec-photos">${photos.map(p => `<img src="${esc(p)}" loading="lazy" data-zoom="${esc(p)}">`).join('')}</div>` : '';
+  const locHtml = loc ? `<div class="loc-callout"${loc.photo ? ` data-zoom="${esc(loc.photo)}"` : ''}>
+      ${loc.photo ? `<img src="${esc(loc.photo)}" loading="lazy" alt="where to find these">` : '<span class="loc-pin">📍</span>'}
+      <div class="loc-txt"><b>Where to find these</b><span>${esc(loc.text || '')}</span></div></div>` : '';
+  const withPics = items.filter(it => it.photo), noPics = items.filter(it => !it.photo);
+  const grid = withPics.length ? `<div class="photo-grid">${withPics.map(it => `<figure class="pg-item"${titleAttr}><img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}"><figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>` : '';
+  const list = noPics.length ? `<ul class="item-list"${titleAttr}>${noPics.map(it => `<li><b>${esc(it.name)}</b>${it.note ? `<span>${esc(it.note)}</span>` : ''}</li>`).join('')}</ul>` : '';
+  return `${intro ? `<p class="intro">${nl2br(intro)}</p>` : ''}${locHtml}${photoStrip}${grid + list || '<p class="muted">Nothing added yet.</p>'}`;
+}
 function render() {
   $('#hero-title').textContent = guide.title || 'Welcome';
   $('#hero-tag').textContent = guide.tagline || '';
@@ -102,35 +123,21 @@ function render() {
     const extraItems = (extra.items || []).filter(ei => !(col.items || []).some(ci => (ci.name || '').toLowerCase() === (ei.name || '').toLowerCase()));
     const items = [...(col.items || []), ...extraItems];
     const rawLoc = (col.location && (col.location.text || col.location.photo)) ? col.location : extra.location;
-    const loc = rawLoc && (rawLoc.text || rawLoc.photo) ? rawLoc : null;
-    const photoStrip = photos.length
-      ? `<div class="sec-photos">${photos.map(p => `<img src="${esc(p)}" loading="lazy" data-zoom="${esc(p)}">`).join('')}</div>` : '';
-    const locHtml = loc ? `<div class="loc-callout"${loc.photo ? ` data-zoom="${esc(loc.photo)}"` : ''}>
-        ${loc.photo ? `<img src="${esc(loc.photo)}" loading="lazy" alt="where to find these">` : '<span class="loc-pin">📍</span>'}
-        <div class="loc-txt"><b>Where to find these</b><span>${esc(loc.text || '')}</span></div></div>` : '';
-    const titleAttr = loc && loc.text ? ` title="📍 ${esc(loc.text)}"` : '';
-    secs.push(card('c-' + col.id, col.icon || '📦', col.title, `
-      ${col.intro ? `<p class="intro">${nl2br(col.intro)}</p>` : ''}
-      ${locHtml}
-      ${photoStrip}
-      ${(() => {
-        const withPics = items.filter(it => it.photo), noPics = items.filter(it => !it.photo);
-        const grid = withPics.length ? `<div class="photo-grid">${withPics.map(it => `
-          <figure class="pg-item"${titleAttr}><img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}">
-          <figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>` : '';
-        const list = noPics.length ? `<ul class="item-list"${titleAttr}>${noPics.map(it => `<li><b>${esc(it.name)}</b>${it.note ? `<span>${esc(it.note)}</span>` : ''}</li>`).join('')}</ul>` : '';
-        return grid + list || '<p class="muted">Nothing added yet.</p>';
-      })()}
-      ${isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(col.title)}</button>` : ''}`));
+    const title = extra.rename || col.title;
+    secs.push(card('c-' + col.id, col.icon || '📦', title,
+      sectionBody(photos, items, rawLoc, col.intro) +
+      (isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(title)}</button>` : '')));
+    VIRTUAL_SECTIONS.filter(v => v.after === col.title).forEach(v =>
+      secs.push(card(v.id, v.icon, v.title, sectionBody(v.photos || [], v.items || [], v.location, v.intro))));
   });
 
   if (isOwner) secs.push(`<div class="add-col-wrap"><button class="add-col" data-edit="addcol">＋ Add a section</button></div>`);
   $('#guide').innerHTML = secs.join('');
 
-  // jump nav
-  $('#jump').innerHTML = [['welcome', '👋'], ['wifi', '📶'], ['codes', '🔑'], ['videos', '🎥'],
-    ...guide.collections.map(c => ['c-' + c.id, c.icon || '📦'])].map(([id, ic]) =>
-      `<a href="#${id}">${ic}</a>`).join('');
+  // jump nav (includes virtual sections in order)
+  const jump = [['welcome', '👋'], ['wifi', '📶'], ['codes', '🔑'], ['videos', '🎥']];
+  (guide.collections || []).forEach(c => { jump.push(['c-' + c.id, c.icon || '📦']); VIRTUAL_SECTIONS.filter(v => v.after === c.title).forEach(v => jump.push([v.id, v.icon])); });
+  $('#jump').innerHTML = jump.map(([id, ic]) => `<a href="#${id}">${ic}</a>`).join('');
 
   // footer contact
   const c = guide.contact || {};
