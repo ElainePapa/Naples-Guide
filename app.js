@@ -190,6 +190,13 @@ async function uploadPhoto(file) {
   if (error) throw error;
   return `${SUPABASE_URL}/storage/v1/object/public/guide/${path}`;
 }
+async function uploadVideo(file) {
+  const ext = (file.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4';
+  const path = `naples/vid-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage.from('guide').upload(path, file, { contentType: file.type || 'video/mp4', upsert: false });
+  if (error) throw error;
+  return `${SUPABASE_URL}/storage/v1/object/public/guide/${path}`;
+}
 
 // ---------- modal ----------
 function openModal(html) { $('#modal-card').innerHTML = html; $('#modal').style.display = 'flex'; document.body.style.overflow = 'hidden'; const c = $('#m-close'); if (c) c.onclick = closeModal; }
@@ -259,7 +266,39 @@ const editCodes = () => {
     await saveGuide();
   });
 };
-const editVideos = () => listEditor('How-To Videos', guide.videos, [{ key: 'title', label: 'Title', ph: 'Turn on the water' }, { key: 'url', label: 'Link', ph: 'YouTube link or video URL' }, { key: 'note', label: 'Note', ph: 'optional', ta: true }], saveGuide);
+function editVideos() {
+  guide.videos = guide.videos || [];
+  const list = () => guide.videos.map((v, i) => `<div class="ci-row" data-i="${i}"><div class="ci-info"><b>🎬 ${esc(v.title || '(untitled)')}</b>${v.note ? `<small>${esc(v.note)}</small>` : ''}${v.url ? `<small class="mono" style="word-break:break-all;opacity:.7">${esc(v.url)}</small>` : ''}</div><button class="le-del" data-i="${i}">🗑</button></div>`).join('') || '<p class="muted">No videos yet.</p>';
+  openModal(`<button class="m-close" id="m-close">✕</button><h3>How-To Videos</h3>
+    <div id="vid-list">${list()}</div>
+    <div class="le-form"><div class="le-form-h">Add a video</div>
+      ${field('Title', 'vid-title', '', 'e.g. Turn on the water heater')}
+      ${field('Note', 'vid-note', '', 'optional', true)}
+      ${field('YouTube / web link', 'vid-url', '', 'paste a link — OR upload a file below')}
+      <label class="photo-btn">📹 Upload a video file<input type="file" id="vid-file" accept="video/*" hidden></label>
+      <span class="ci-photo-status" id="vid-status"></span>
+      <p class="hint">Best for short clips (under ~50 MB). For long walkthroughs, an Unlisted YouTube link is smoother.</p>
+      <button class="add" id="vid-add">＋ Add video</button></div>
+    <button class="save" id="vid-done">Done</button>`);
+  let uploadedUrl = '';
+  const redraw = () => { $('#vid-list').innerHTML = list(); $('#vid-list').querySelectorAll('.le-del').forEach(b => b.onclick = async () => { guide.videos.splice(+b.dataset.i, 1); await saveGuide(); redraw(); }); };
+  redraw();
+  $('#vid-file').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 50 * 1024 * 1024) { $('#vid-status').textContent = `That clip is ${(f.size / 1048576).toFixed(0)} MB — over the 50 MB limit. Try a shorter clip or a YouTube link.`; e.target.value = ''; return; }
+    $('#vid-status').textContent = 'Uploading… (may take a minute — keep this open)';
+    try { uploadedUrl = await uploadVideo(f); $('#vid-status').textContent = '✓ video uploaded — now tap “Add video”'; }
+    catch (err) { uploadedUrl = ''; $('#vid-status').textContent = 'Upload failed — ' + (err.message || err); }
+  };
+  $('#vid-add').onclick = async () => {
+    const title = $('#vid-title').value.trim(), url = uploadedUrl || $('#vid-url').value.trim();
+    if (!title && !url) { $('#vid-status').textContent = 'Add a title and a link or file first.'; return; }
+    guide.videos.push({ title, url, note: $('#vid-note').value.trim() });
+    uploadedUrl = ''; $('#vid-title').value = ''; $('#vid-note').value = ''; $('#vid-url').value = ''; $('#vid-status').textContent = '';
+    await saveGuide(); redraw();
+  };
+  $('#vid-done').onclick = async () => { await saveGuide(); closeModal(); render(); };
+}
 const editContact = () => { openModal(`<button class="m-close" id="m-close">✕</button><h3>Contact</h3>${field('Name', 'ct-name', guide.contact.name)}${field('Phone', 'ct-phone', guide.contact.phone)}${field('Note', 'ct-note', guide.contact.note, 'e.g. text is fastest', true)}<button class="save" id="ct-save">Save</button>`); $('#ct-save').onclick = async () => { guide.contact = { name: $('#ct-name').value.trim(), phone: $('#ct-phone').value.trim(), note: $('#ct-note').value.trim() }; await saveGuide(); closeModal(); render(); }; };
 
 async function editCollection(colId) {
