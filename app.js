@@ -156,8 +156,18 @@ async function editWelcome() {
     ${field('Tagline', 'e-tag', guide.tagline)}
     ${field('Welcome message', 'e-welcome', guide.welcome, '', true)}
     ${field('Checkout note', 'e-checkout', guide.checkout, '', true)}
+    ${field('Guest password', 'e-pass', '', guide.guestPassHash ? '•••••• set — type to change' : 'optional — leave blank for an open link')}
+    <p class="hint">Set a password and guests must enter it to open the guide. ${guide.guestPassHash ? '<button class="link-btn" id="e-passclear">Remove password</button>' : ''}</p>
     <button class="save" id="e-save">Save</button>`);
-  $('#e-save').onclick = async () => { guide.title = $('#e-title').value.trim(); guide.tagline = $('#e-tag').value.trim(); guide.welcome = $('#e-welcome').value.trim(); guide.checkout = $('#e-checkout').value.trim(); await saveGuide(); closeModal(); render(); };
+  $('#e-save').onclick = async () => {
+    guide.title = $('#e-title').value.trim(); guide.tagline = $('#e-tag').value.trim();
+    guide.welcome = $('#e-welcome').value.trim(); guide.checkout = $('#e-checkout').value.trim();
+    const pw = $('#e-pass').value.trim();
+    if (pw) { guide.guestPassHash = await sha(pw); localStorage.setItem('naples_unlock', guide.guestPassHash); }
+    await saveGuide(); closeModal(); render();
+  };
+  const pc = document.getElementById('e-passclear');
+  if (pc) pc.onclick = async () => { delete guide.guestPassHash; await saveGuide(); closeModal(); render(); };
 }
 async function editWifi() {
   openModal(`<button class="m-close" id="m-close">✕</button><h3>Wi-Fi</h3>
@@ -244,10 +254,35 @@ document.addEventListener('click', e => {
 });
 $('#share-guide').onclick = () => openModal(`<button class="m-close" id="m-close">✕</button><h3>Share this guide</h3><p class="hint">Print this QR for the house, or send guests the link.</p><div class="qr-wrap"><img class="qr" src="${qr(location.href.split('#')[0], 260)}"></div><div class="kv"><span>Link</span><b class="mono" style="font-size:.8rem;word-break:break-all">${esc(location.href.split('#')[0])}</b><button class="mini-btn" data-copy="${esc(location.href.split('#')[0])}">Copy</button></div>`);
 
+// ---------- guest password gate (optional; set by owner) ----------
+async function sha(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function renderGate() {
+  let ov = document.getElementById('gate');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'gate'; ov.className = 'gate'; document.body.appendChild(ov); }
+  ov.innerHTML = `<div class="gate-card"><div class="gate-emoji">🌴</div>
+    <h2>${esc(guide.title || 'Welcome')}</h2>
+    <p>Enter the guest password your host gave you to open the guide.</p>
+    <input id="gate-pass" type="password" placeholder="Guest password" autocomplete="off">
+    <button id="gate-go">Open guide →</button>
+    <p class="gate-status" id="gate-status"></p></div>`;
+  document.body.style.overflow = 'hidden';
+  const go = async () => {
+    const h = await sha(document.getElementById('gate-pass').value);
+    if (h === guide.guestPassHash) { localStorage.setItem('naples_unlock', h); ov.remove(); document.body.style.overflow = ''; render(); }
+    else document.getElementById('gate-status').textContent = 'Wrong password — check with your host.';
+  };
+  document.getElementById('gate-go').onclick = go;
+  document.getElementById('gate-pass').onkeydown = e => { if (e.key === 'Enter') go(); };
+}
+
 // ---------- init ----------
 (async () => {
   if (sb) { try { const { data } = await sb.auth.getSession(); if (data && data.session) isOwner = true; } catch {} }
   await loadGuide();
-  render();
+  const locked = guide.guestPassHash && !isOwner && localStorage.getItem('naples_unlock') !== guide.guestPassHash;
+  if (locked) renderGate(); else render();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
