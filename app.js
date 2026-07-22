@@ -60,15 +60,15 @@ const SECTION_EXTRAS = {
 
 // code-only sections (rendered after their `after` DB section; not owner-editable)
 const VIRTUAL_SECTIONS = [
-  { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', photos: ['photos/kitchen-appliances.jpg', 'photos/kettle-crockpot.jpg', 'photos/hand-mixer.jpg', 'photos/chopper.jpg', 'photos/blender.jpg', 'photos/toaster.jpg', 'photos/percolator.jpg'], items: [
-    { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet' },
-    { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' },
+  { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', items: [
+    { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet', photo: 'photos/kettle-crockpot.jpg' },
+    { name: 'Crock pot / slow cooker', note: 'Upper cabinet — use a lid from the cookware set', photo: 'photos/kitchen-appliances.jpg' },
+    { name: 'Hand mixer', note: 'Cuisinart 9-speed', photo: 'photos/hand-mixer.jpg' },
+    { name: 'Food chopper & grinder', note: 'Cuisinart — chop & grind', photo: 'photos/chopper.jpg' },
+    { name: 'Blender', note: 'Oster glass-jar blender', photo: 'photos/blender.jpg' },
+    { name: 'Toaster', note: 'Zwilling 2-slice', photo: 'photos/toaster.jpg' },
+    { name: 'Coffee percolator', note: 'Presto stainless', photo: 'photos/percolator.jpg' },
     { name: 'Cookware & lids', note: 'Pots, pans and glass lids in the lower cabinets' },
-    { name: 'Hand mixer', note: 'Cuisinart 9-speed' },
-    { name: 'Food chopper & grinder', note: 'Cuisinart — chop & grind' },
-    { name: 'Blender', note: 'Oster glass-jar blender' },
-    { name: 'Toaster', note: 'Zwilling 2-slice' },
-    { name: 'Coffee percolator', note: 'Presto stainless' },
   ] },
 ];
 // code-defined videos (always shown, survive owner edits)
