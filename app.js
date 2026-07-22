@@ -60,7 +60,7 @@ const SECTION_EXTRAS = {
 
 // code-only sections (rendered after their `after` DB section; not owner-editable)
 const VIRTUAL_SECTIONS = [
-  { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', photos: ['photos/kitchen-appliances.jpg', 'photos/kettle-crockpot.jpg'], items: [
+  { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', photos: ['photos/kitchen-appliances.jpg', 'photos/kettle-crockpot.jpg', 'photos/hand-mixer.jpg', 'photos/chopper.jpg', 'photos/blender.jpg', 'photos/toaster.jpg', 'photos/percolator.jpg'], items: [
     { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet' },
     { name: 'Crock pot / slow cooker', note: 'Upper kitchen cabinet — use a lid from the cookware set' },
     { name: 'Cookware & lids', note: 'Pots, pans and glass lids in the lower cabinets' },
