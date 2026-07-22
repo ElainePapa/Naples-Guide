@@ -55,7 +55,7 @@ const SECTION_EXTRAS = {
   'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Beach & Pool': { photos: ['photos/towels.jpg', 'photos/towels-bags.jpg'], location: { text: 'In the blue console by the entry — beach towels and the 3 beach bags.', photo: 'photos/furniture-blue.jpg' }, items: [{ name: 'Beach towels' }, { name: 'Beach bags (3)' }] },
-  'Where to Find Things': { photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
+  'Where to Find Things': { intro: '🖨️ To print (AirPrint from an iPhone, iPad or Mac):\n1. Connect your device to the house Wi-Fi.\n2. Open the photo or document → tap Share → Print.\n3. Tap “Printer” and choose “HP DeskJet 4200 series”.\n4. Tap Print. Paper & spare ink are in the same cabinet.', photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
 };
 
 // code-only sections (rendered after their `after` DB section; not owner-editable)
@@ -135,7 +135,7 @@ function render() {
     const rawLoc = (col.location && (col.location.text || col.location.photo)) ? col.location : extra.location;
     const title = extra.rename || col.title;
     secs.push(card('c-' + col.id, col.icon || '📦', title,
-      sectionBody(photos, items, rawLoc, col.intro) +
+      sectionBody(photos, items, rawLoc, col.intro || extra.intro) +
       (isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(title)}</button>` : '')));
     VIRTUAL_SECTIONS.filter(v => v.after === col.title).forEach(v =>
       secs.push(card(v.id, v.icon, v.title, sectionBody(v.photos || [], v.items || [], v.location, v.intro))));
