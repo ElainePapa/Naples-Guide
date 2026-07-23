@@ -63,6 +63,12 @@ const VIRTUAL_SECTIONS = [
   { id: 'pickleball', after: 'Beach & Pool', icon: '🏓', title: 'Pickleball', intro: 'Baker Carroll Point Pickle Ball courts.', photos: ['photos/pickleball-courts.jpg'], items: [
     { name: 'Gate', note: 'VSC1 — entry code: 1157' },
   ] },
+  { id: 'eat', after: 'Games & Puzzles', icon: '🍽️', title: 'Where to Eat', intro: 'Naples is a serious food town — a few of our favorites, near and far.', items: [
+    { name: 'Violí — our favorite', url: 'https://www.violinaples.com/', note: 'Modern Greek taverna at Mercato, from “Top Chef Greece” winner Athinagoras Kostakos. Book ahead!', photo: 'photos/eat-violi.jpg' },
+    { name: 'The Bicyclette Cookshop', url: 'https://bicyclettecookshop.com/', note: 'Another favorite — award-winning New American kitchen on Vanderbilt Beach Rd, just minutes away', photo: 'photos/eat-bicyclette.jpg' },
+    { name: '5th Avenue South', url: 'https://www.fifthavenuesouth.com/', note: 'Downtown Naples’ palm-lined main street: block after block of al-fresco restaurants, galleries and boutiques, a short stroll from the beach and Naples Pier (~20 min south)', photo: 'photos/eat-fifth-ave.jpg' },
+    { name: 'Mercato', url: 'https://experiencemercato.com/', note: 'Open-air shopping & dining village 2 miles up US-41 — restaurants and bars, boutiques, Whole Foods and the Silverspot cinema, all in one stroll' },
+  ] },
   { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', items: [
     { name: 'Electric kettle', note: 'For hot water — upper kitchen cabinet', photo: 'photos/kettle-crockpot.jpg' },
     { name: 'Crock pot / slow cooker', note: 'Upper cabinet — use a lid from the cookware set', photo: 'photos/kitchen-appliances.jpg' },
@@ -91,8 +97,9 @@ function sectionBody(photos, items, rawLoc, intro) {
       ${loc.photo ? `<img src="${esc(loc.photo)}" loading="lazy" alt="where to find these">` : '<span class="loc-pin">📍</span>'}
       <div class="loc-txt"><b>Where to find these</b><span>${esc(loc.text || '')}</span></div></div>` : '';
   const withPics = items.filter(it => it.photo), noPics = items.filter(it => !it.photo);
-  const grid = withPics.length ? `<div class="photo-grid">${withPics.map(it => `<figure class="pg-item"${titleAttr}><img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}"><figcaption>${esc(it.name)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>` : '';
-  const list = noPics.length ? `<ul class="item-list"${titleAttr}>${noPics.map(it => `<li><b>${esc(it.name)}</b>${it.note ? `<span>${esc(it.note)}</span>` : ''}</li>`).join('')}</ul>` : '';
+  const nameHtml = it => it.url ? `<a class="item-link" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.name)} ↗</a>` : esc(it.name);
+  const grid = withPics.length ? `<div class="photo-grid">${withPics.map(it => `<figure class="pg-item"${titleAttr}><img src="${esc(it.photo)}" alt="${esc(it.name)}" loading="lazy" data-zoom="${esc(it.photo)}"><figcaption>${nameHtml(it)}${it.note ? `<small>${esc(it.note)}</small>` : ''}</figcaption></figure>`).join('')}</div>` : '';
+  const list = noPics.length ? `<ul class="item-list"${titleAttr}>${noPics.map(it => `<li><b>${nameHtml(it)}</b>${it.note ? `<span>${esc(it.note)}</span>` : ''}</li>`).join('')}</ul>` : '';
   return `${intro ? `<p class="intro">${nl2br(intro)}</p>` : ''}${locHtml}${photoStrip}${grid + list || '<p class="muted">Nothing added yet.</p>'}`;
 }
 function render() {
