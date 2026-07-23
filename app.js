@@ -60,7 +60,7 @@ const SECTION_EXTRAS = {
 
 // code-only sections (rendered after their `after` DB section; not owner-editable)
 const VIRTUAL_SECTIONS = [
-  { id: 'pickleball', after: 'Beach & Pool', icon: '🏓', title: 'Pickleball', intro: 'Baker Carroll Point Pickle Ball courts.', items: [
+  { id: 'pickleball', after: 'Beach & Pool', icon: '🏓', title: 'Pickleball', intro: 'Baker Carroll Point Pickle Ball courts.', photos: ['photos/pickleball-courts.jpg'], items: [
     { name: 'Gate', note: 'VSC1 — entry code: 1157' },
   ] },
   { id: 'kitchen-tools', after: 'Pantry & Kitchen', icon: '🍳', title: 'Kitchen Tools', items: [
