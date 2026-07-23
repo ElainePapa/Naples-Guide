@@ -55,13 +55,19 @@ const SECTION_EXTRAS = {
   'Games & Puzzles': { photos: ['photos/games-cards.jpg', 'photos/games-board.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Fitness & Wellness': { photos: ['photos/dumbbells.jpg', 'photos/massager.jpg'], location: { text: 'In the whitewashed cabinet in the living room.', photo: 'photos/furniture-white.jpg' } },
   'Beach & Pool': { photos: ['photos/towels.jpg', 'photos/towels-bags.jpg'], location: { text: 'In the blue console by the entry — beach towels and the 3 beach bags.', photo: 'photos/furniture-blue.jpg' }, items: [{ name: 'Pool entry', note: 'Use the key fob to get in and out of the pool gate' }, { name: 'Pool Wi-Fi', note: 'Network: Fision Wi-Fi by Hotwire · Password: bakercarrollwifi' }, { name: 'Beach towels' }, { name: 'Beach bags (3)' }] },
-  'Where to Find Things': { intro: '🖨️ To print (AirPrint from an iPhone, iPad or Mac):\n1. Connect your device to the house Wi-Fi.\n2. Open the photo or document → tap Share → Print.\n3. Tap “Printer” and choose “HP DeskJet 4200 series”.\n4. Tap Print. Paper & spare ink are in the same cabinet.', photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Trash room', note: 'Two doors down from the elevator — see the how-to video', photo: 'photos/trash-room.jpg' }, { name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
+  'Where to Find Things': { intro: '🖨️ To print (AirPrint from an iPhone, iPad or Mac):\n1. Connect your device to the house Wi-Fi.\n2. Open the photo or document → tap Share → Print.\n3. Tap “Printer” and choose “HP DeskJet 4200 series”.\n4. Tap Print. Paper & spare ink are in the same cabinet.', photos: ['photos/printer.jpg', 'photos/placemats.jpg'], location: { text: 'Tall whitewashed cabinet with the octopus & starfish on top, by the aqua artwork.', photo: 'photos/office-cabinet.jpg' }, items: [{ name: 'Printer', note: 'HP DeskJet 4258e — paper & spare ink cartridges are in the same cabinet' }, { name: 'Placemats & table linens', note: 'Homewear placemats + cloth napkins, lower shelf' }] },
 };
 
 // code-only sections (rendered after their `after` DB section; not owner-editable)
 const VIRTUAL_SECTIONS = [
   { id: 'pickleball', after: 'Beach & Pool', icon: '🏓', title: 'Pickleball', intro: 'Baker Carroll Point Pickle Ball courts.', photos: ['photos/pickleball-courts.jpg'], items: [
     { name: 'Gate', note: 'VSC1 — entry code: 1157' },
+  ] },
+  { id: 'trash', after: 'Where to Find Things', icon: '🗑️', title: 'Trash & Recycling', items: [
+    { name: 'Trash room', note: 'Two doors down from the elevator', photo: 'photos/trash-room.jpg' },
+  ], videos: [
+    { title: 'Where the trash goes', url: 'videos/trash-room.mp4', note: 'The trash room is two doors down from the elevator' },
+    { title: 'Where recycling goes', url: 'videos/recycling.mp4', note: 'Off the elevator, around the corner, and through the door outside' },
   ] },
   { id: 'eat', after: 'Games & Puzzles', icon: '🍽️', title: 'Where to Eat', intro: 'Naples is a serious food town — a few of our favorites, near and far.', items: [
     { name: 'Violí — our favorite', url: 'https://www.violinaples.com/', note: 'Modern Greek taverna at Mercato, from “Top Chef Greece” winner Athinagoras Kostakos. Book ahead!', photo: 'photos/eat-violi.jpg' },
@@ -83,8 +89,6 @@ const VIRTUAL_SECTIONS = [
 // code-defined videos (always shown, survive owner edits)
 const BUILTIN_VIDEOS = [
   { title: 'How to find the hidden pantry', url: 'videos/hidden-pantry.mp4', note: 'A quick walkthrough' },
-  { title: 'Where the trash goes', url: 'videos/trash-room.mp4', note: 'The trash room is two doors down from the elevator' },
-  { title: 'Where recycling goes', url: 'videos/recycling.mp4', note: 'Off the elevator, around the corner, and through the door outside' },
 ];
 
 // ---------- render ----------
@@ -150,7 +154,7 @@ function render() {
       sectionBody(photos, items, rawLoc, col.intro || extra.intro) +
       (isOwner ? `<button class="edit-btn" data-edit="col:${col.id}">✏️ Edit ${esc(title)}</button>` : '')));
     VIRTUAL_SECTIONS.filter(v => v.after === col.title).forEach(v =>
-      secs.push(card(v.id, v.icon, v.title, sectionBody(v.photos || [], v.items || [], v.location, v.intro))));
+      secs.push(card(v.id, v.icon, v.title, sectionBody(v.photos || [], v.items || [], v.location, v.intro) + (v.videos || []).map(videoHtml).join(''))));
   });
 
   if (isOwner) secs.push(`<div class="add-col-wrap"><button class="add-col" data-edit="addcol">＋ Add a section</button></div>`);
